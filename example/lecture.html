@@ -1,0 +1,449 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script></script>
+    <!-- <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script> -->
+</head>
+<body>
+<h3 id="aes-rijndael">AES (Rijndael)</h3>
+<p>The <em>advanced encryption standard</em> (AES) is the successor of the outdated DES. It was developed by the two Belgian cryptographers Joan Daemen and Vincent Rijmen. It was originally named <em>Rijndael</em>, but renamed to AES when it was adopted as official US standard in November 2001. Rijndael is a block cipher, however, it does not rely on the basic design of the Feistel cipher. In particular is has distinct encryption and decryption algorithms. But similar to DES, it is round based and relies on a combination of substitutions, permutations and key addition. AES is motivated by arithmetic operations in the field <span class="math inline">\({\mathbb{F}}_{2^8}\)</span>, and its implementation in hardware and software is compact and fast.</p>
+<p>Rijndael is parameterisable in that it can work with:</p>
+<ul>
+<li><p>block sizes of 128, 192, and 256 bits,</p></li>
+<li><p>key sizes of 128, 192, and 256 bits, and</p></li>
+<li><p>10, 12, or 14 rounds of encryption.</p></li>
+</ul>
+<p>Rijndael performs encryption, decryption and computes the key schedule using arithmetic in <span class="math inline">\({\mathbb{F}}_{2^8}\)</span> with respect to the irreducible polynomial <span class="math inline">\(p(x)=x^8+x^4+x^3+x+1\)</span>. That is, <span class="math inline">\({\mathbb{F}}_{2^8}={\mathbb{F}}_{2}[x]/(x^8+x^4+x^3+x+1)\)</span>.</p>
+<p>We will discuss the basic operations of Rijndael for the case of <span class="math inline">\(128\)</span> bit block and key size and <span class="math inline">\(10\)</span> rounds of encryption. Rijndael arranges both message and key in <span class="math inline">\(4\times4\)</span> matrices of <span class="math inline">\(8\)</span>-bit elements, i.e., each element is exactly one byte and each column and each row contain <span class="math inline">\(32\)</span>-bit words.</p>
+<p>If <span class="math inline">\(m=m_0\|m_1\|\ldots\|m_{15}\)</span> is the message, then Rijndael initialises the so called <em>state matrix</em> <span class="math inline">\(A\)</span> as follows: <span class="math display">\[\begin{bmatrix}
+  m_0 &amp; m_4 &amp; m_8 &amp; m_{12}\\
+  m_1 &amp; m_5 &amp; m_9 &amp; m_{13}\\
+  m_2 &amp; m_6 &amp; m_{10} &amp; m_{14}\\
+  m_3 &amp; m_7 &amp; m_{11} &amp; m_{15}\\
+\end{bmatrix}\longrightarrow
+A=
+\begin{bmatrix}
+  a_{0,0} &amp; a_{0,1} &amp; a_{0,2} &amp; a_{0,3}\\
+  a_{1,0} &amp; a_{1,1} &amp; a_{1,2} &amp; a_{1,3}\\
+  a_{2,0} &amp; a_{2,1} &amp; a_{2,2} &amp; a_{2,3}\\
+  a_{3,0} &amp; a_{3,1} &amp; a_{3,2} &amp; a_{3,3}\\
+\end{bmatrix}\]</span></p>
+<p>Each round applies the following manipulations to the state matrix:</p>
+<ol>
+<li><p>a substitution operation on every single byte <em>SubBytes</em>,</p></li>
+<li><p>a byte permutation <em>ShiftRows</em>,</p></li>
+<li><p>a column manipulation <em>MixColumns</em>,</p></li>
+<li><p>and an xor of the state with the round key <em>AddRoundKey</em>.</p></li>
+</ol>
+<p>An exception is the last round, where the <em>MixColumns</em> operation is skipped.</p>
+<p>For each of these operations, except for <em>AddRoundKey</em>, we need corresponding inverse operations for the decryption. Here is an overview of the encryption and decryption algorithms:</p>
+<p><span>.5</span> <span class="math inline">\(E_K(M)\)</span></p>
+<p><span class="math inline">\(A := M\)</span><br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_0\)</span>)<br />
+<strong>for</strong> =<span class="math inline">\(i\)</span> = 1 <strong>to</strong> 9 <strong>do</strong><br />
+<span class="math inline">\(A :=\)</span> SubBytes(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> ShiftRows(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> MixColumns(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_i\)</span>)<br />
+<strong>end</strong><br />
+<span class="math inline">\(A :=\)</span> SubBytes(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> ShiftRows(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_{10}\)</span>)<br />
+<span class="math inline">\(C := A\)</span></p>
+<p><span>.5</span> <span class="math inline">\(D_K(C)\)</span></p>
+<p><span class="math inline">\(A := C\)</span><br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_{10}\)</span>)<br />
+<span class="math inline">\(A :=\)</span> InverseShiftRows(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> InverseSubBytes(<span class="math inline">\(A\)</span>)<br />
+<strong>for</strong> =<span class="math inline">\(i\)</span> = 9 <strong>downto</strong> 1 <strong>do</strong><br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_i\)</span>)<br />
+<span class="math inline">\(A :=\)</span> InverseMixColumns(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> InverseShiftRows(<span class="math inline">\(A\)</span>)<br />
+<span class="math inline">\(A :=\)</span> InverseSubBytes(<span class="math inline">\(A\)</span>)<br />
+<strong>end</strong><br />
+<span class="math inline">\(A :=\)</span> AddRoundKey(<span class="math inline">\(A\)</span>, <span class="math inline">\(K_0\)</span>)<br />
+<span class="math inline">\(M := A\)</span></p>
+<p>Here are the single operations in detail.</p>
+<p><em>1. SubBytes:</em> This operation is similar to the S-Box substitution of DES. Each byte <span class="math inline">\(a_{i,j}\)</span> of the state is substituted by the output of a single S-Box. This S-Box corresponds to an algebraic operation in Rijndael’s finite field <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span>. Each byte <span class="math inline">\(a_{i,j}=[z_7,\ldots,z_0]\)</span> is considered as a polynomial in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span>. Its substitution is then computed in two steps:</p>
+<ol>
+<li><p>First we compute the multiplicative inverse of <span class="math inline">\(a_{i,j}\)</span> in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span> to get <span class="math inline">\({{{a_{i,j}}^{-1}}}=[x_7,\ldots, x_0]\)</span>. (The zero element is mapped to <span class="math inline">\([0,\ldots,0]\)</span>.)</p></li>
+<li><p>We then compute a new bit vector <span class="math inline">\(b_{i,j}=[y_7,\ldots,y_0]\)</span> with the following transformation in <span class="math inline">\({\mathbb{F}}_2\)</span> (observe that the vector addition is the same as an xor <span class="math inline">\({{\oplus}}\)</span>): <span class="math display">\[\begin{bmatrix}y_0\\y_1\\y_2\\y_3\\y_4\\y_5\\y_6\\y_7\end{bmatrix} =
+  \begin{bmatrix} 1&amp;0&amp;0&amp;0&amp;1&amp;1&amp;1&amp;1 \\ 1&amp;1&amp;0&amp;0&amp;0&amp;1&amp;1&amp;1 \\ 1&amp;1&amp;1&amp;0&amp;0&amp;0&amp;1&amp;1 \\ 
+    1&amp;1&amp;1&amp;1&amp;0&amp;0&amp;0&amp;1 \\ 1&amp;1&amp;1&amp;1&amp;1&amp;0&amp;0&amp;0 \\ 0&amp;1&amp;1&amp;1&amp;1&amp;1&amp;0&amp;0 \\ 0&amp;0&amp;1&amp;1&amp;1&amp;1&amp;1&amp;0 \\ 
+    0&amp;0&amp;0&amp;1&amp;1&amp;1&amp;1&amp;1\end{bmatrix}\cdot
+  \begin{bmatrix}x_0\\x_1\\x_2\\x_3\\x_4\\x_5\\x_6\\x_7\end{bmatrix} +
+  \begin{bmatrix}0\\1\\1\\0\\0\\0\\1\\1\end{bmatrix}\]</span></p></li>
+</ol>
+<p>The substitution can be schematically displayed as:</p>
+<p><img src="AES-SubBytes" alt="image" height="188" /> (0,2)<span>Source: Wikipedia</span></p>
+<p>For the decryption algorithm we can define an inverse operation <em>InverseSubBytes</em> by first reversing the transformation:</p>
+<p><span class="math display">\[\begin{bmatrix}x_0\\x_1\\x_2\\x_3\\x_4\\x_5\\x_6\\x_7\end{bmatrix} =
+\begin{bmatrix} 0&amp;0&amp;1&amp;0&amp;0&amp;1&amp;0&amp;1\\ 1&amp;0&amp;0&amp;1&amp;0&amp;0&amp;1&amp;0\\ 0&amp;1&amp;0&amp;0&amp;1&amp;
+0&amp;0&amp;1\\ 1&amp;0&amp;1&amp;0&amp;0&amp;1&amp;0&amp;0\\ 0&amp;1&amp;0&amp;1&amp;0&amp;0&amp;1&amp;0\\ 0&amp;0&amp;1&amp;0&amp;1&amp;0&amp;0&amp;1\\ 
+1&amp;0&amp;0&amp;1&amp;0&amp;1&amp;0&amp;0\\ 0&amp;1&amp;0&amp;0&amp;1&amp;0&amp;1&amp;0
+\end{bmatrix}
+\left(\begin{bmatrix}y_0\\y_1\\y_2\\y_3\\y_4\\y_5\\y_6\\y_7\end{bmatrix} +
+  \begin{bmatrix}0\\1\\1\\0\\0\\0\\1\\1\end{bmatrix}\right)\]</span> and then computing the multiplicative inverse of <span class="math inline">\([x_7,\ldots, x_0]\)</span> in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span>.</p>
+<p><em>2. ShiftRows:</em> This operation performs a cyclic shift on the state matrix by shifting each row separately. This ensures that the columns of the state matrix interact over several rounds of encryption. The lower three rows are shifted by one, two, and three positions, respectively:</p>
+<p><img src="AES-ShiftRows" alt="image" /> (0,2)<span>Source: Wikipedia</span></p>
+<p>For the decryption the <em>InverseShiftRows</em> does the reverse shift. <em>3. MixColumns:</em> This operation ensure interaction of the rows of the state matrix by mixing each column separately. For this it performs the following matrix multiplication for each column <span class="math inline">\(i=1,2,3,4\)</span> over <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span>, where the entries of the matrix are hexadecimal representations of polynomials of degree <span class="math inline">\(7\)</span> (e.g. <span class="math inline">\(0x03\)</span> corresponds to <span class="math inline">\(x+1\)</span>.) <span class="math display">\[\begin{bmatrix}b_{0,i}\\b_{1,i}\\b_{2,i}\\b_{3,i}\end{bmatrix}=
+\begin{bmatrix} 0x02&amp;0x03&amp;0x01&amp;0x01 \\ 0x01&amp;0x02&amp;0x03&amp;0x01 \\ 
+  0x01&amp;0x01&amp;0x02&amp;0x03 \\ 0x03&amp;0x01&amp;0x01&amp;0x02 \end{bmatrix}\cdot
+\begin{bmatrix}a_{0,i}\\a_{1,i}\\a_{2,i}\\a_{3,i}\end{bmatrix}\]</span> This operation actually corresponds to a polynomial multiplication in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}[x]/(x^4+1)\)</span>, the ring of polynomials whose coefficient are in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span>, i.e., they are polynomials themselves. Observe that <span class="math inline">\(x^4+1\)</span> is not irreducible in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span> and therefore <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}[x]/(x^4+1)\)</span> is indeed a ring not a field.</p>
+<p><span class="math display">\[a(x)\cdot c(x)=(a_3x^3+a_2x^2+a_1x+a_0)\cdot (0x03x^3+0x01x^2+0x01x+0x02)
+({\bmod}\; x^4+1)\]</span> We can picture <em>MixColumns</em> as</p>
+<p><img src="AES-MixColumns" alt="image" /> (0,2)<span>Source: Wikipedia</span></p>
+<p>The inverse operation <em>InverseMixColumns</em> is then simply the multiplication with <span class="math inline">\({{{c(x)}^{-1}}}\)</span>, which has an inverse in the ring <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}[x]/(x^4+1)\)</span>.</p>
+<p><em>4. AddRoundKey:</em> As mentioned earlier, the key size of AES is <span class="math inline">\(128\)</span> bits. All the round keys <span class="math inline">\(K_0,\ldots,K_{10}\)</span> derived from the key <span class="math inline">\(K\)</span> are also <span class="math inline">\(128\)</span> bits and can therefore be expressed as a <span class="math inline">\(4\times4\)</span> matrix: <span class="math display">\[K_i=
+\begin{bmatrix}
+  k_{0,0} &amp; k_{0,1} &amp; k_{0,2} &amp; k_{0,3}\\
+  k_{1,0} &amp; k_{1,1} &amp; k_{1,2} &amp; k_{1,3}\\
+  k_{2,0} &amp; k_{2,1} &amp; k_{2,2} &amp; k_{2,3}\\
+  k_{3,0} &amp; k_{3,1} &amp; k_{3,2} &amp; k_{3,3}\\
+\end{bmatrix}\]</span> Adding the round key is simply the xor-ing of the state matrix and the round key matrix byte by byte: <span class="math inline">\(A{{\oplus}}K_i\)</span>. The inverse of this operation is obviously the same and we do not need a special operation for the decryption.</p>
+<p><img src="AES-AddRoundKey" alt="image" /> (0,2)<span>Source: Wikipedia</span></p>
+<p>The round keys <span class="math inline">\(K_0,\ldots,K_{10}\)</span> are derived from the key <span class="math inline">\(K\)</span>. Since <span class="math inline">\(K\)</span> is <span class="math inline">\(128\)</span> bits we can divide it into 4 words of <span class="math inline">\(32\)</span> bits each: <span class="math inline">\(K=W_0\|W_1\|W_2\|W_3\)</span>, which also corresponds to round key <span class="math inline">\(K_0\)</span>. All subsequent round keys <span class="math inline">\(K_i=W_{4i}\|W_{4i+1}\|W_{4i+2}\|W_{4i+3}\)</span> are then computed using an <span class="math inline">\(8\)</span> bit left rotation, an S-Box substitution with the <em>SubBytes</em> function, and a scrambling sequence, which is started with a round constant <span class="math inline">\(RC_i\)</span> that is computed in <span class="math inline">\({{ {\mathbb{F}}_{2^8}}}\)</span> by <span class="math display">\[{RC_i}=x^i
+({\bmod}\; x^8+x^4+x^3+x+1).\]</span> The algorithm then looks like this:</p>
+<p><span>1.0</span></p>
+<p>KeySchedule(<span class="math inline">\(K\)</span>)<br />
+<span class="math inline">\(W_0\|W_1\|W_2\|W_3 := K\)</span><br />
+<strong>for</strong> =<span class="math inline">\(i\)</span> := 1 <strong>to</strong> 10 <strong>do</strong><br />
+<span class="math inline">\(T := W_{4i-1}\lll 8\)</span><br />
+<span class="math inline">\(T :=\)</span> SubBytes(<span class="math inline">\(T\)</span>)<br />
+<span class="math inline">\(T := T {{\oplus}}RC_i\)</span><br />
+<span class="math inline">\(W_{4i} := W_{4i-4} {{\oplus}}T\)</span><br />
+<span class="math inline">\(W_{4i+1} := W_{4i-3} {{\oplus}}W_{4i}\)</span><br />
+<span class="math inline">\(W_{4i+2} := W_{4i-2} {{\oplus}}W_{4i+1}\)</span><br />
+<span class="math inline">\(W_{4i+3} := W_{4i-1} {{\oplus}}W_{4i+2}\)</span><br />
+<strong>end</strong></p>
+<p>Note that <em>SubBytes</em> is applied to the four <span class="math inline">\(8\)</span> bit bytes of the <span class="math inline">\(32\)</span> bit word <span class="math inline">\(T\)</span> individually.</p>
+<h3 id="aacs-advanced-access-content-system">AACS — Advanced Access Content System</h3>
+<p>The Advanced Access Content System (AACS) is a Digital Rights Management system for HD-DVD and Blu-Ray Discs developed by a consortium that includes Disney, Intel, Microsoft, Matsushita (Panasonic), Warner Brothers, IBM, Toshiba, and Sony. The general idea of Digital Rights Management (DRM) is to restrict access control to electronic media and playback devices to retain full control by the copyright owner. We first give a brief overview of AACS and then dicuss some of the issues arising from AACS and DRM in general.</p>
+<p>AACS uses encryption, hash functions, and watermarking schemes based on AES. Exact specifications for parts of the technology are published by the AACS licensing authority at <a href="http://www.aacsla.com" class="uri">http://www.aacsla.com</a>. Below is a schematic overview of the mechanism of AACS.</p>
+<p><span>.5</span> The content of a disc is encrypted with AES using a collection of <em>title keys</em>. The encrypted content, together with the encrypted title keys, a <em>media key block (MKB)</em>, and the <em>unique disc ID</em> are all stored on the disc.</p>
+<p>An AACS encrypted disc can only be accessed with a fully licensed player. Each licensed player gets a unique set of <em>device keys</em> as well as a unique <em>Host Private Key</em>. The latter makes it possible that particular playback devices or programmes can be individually revoked.</p>
+<p>The device keys are used to compute a key from the MKB. The host private key is needed to retrieve the disc ID. Both values are then processed by an AES-based one-way function, AES-G. (One-way functions are functions easy to compute, but infeasible to invert. We will discuss one-way functions in more detail later in the lecture.)</p>
+<p><span>.5</span></p>
+<p><img src="AACS-Simple" alt="image" height="340" /> (0,2)<span>Source: arstechnica.com</span></p>
+<p>The result of AES-G is then used to decrypt the title keys, which in turn are used to finally decrypt the content.</p>
+<p>Here are some of the security requirements for AACS implementations to ensure DRM requirements:</p>
+<ul>
+<li><p>The content should “not be present on any User-Accessible Bus in analog or unencrypted, compressed form”, because users could possibly record or redirect that content.</p></li>
+<li><p>Implementations must use “encryption, execution of a portion of the implementation in ring zero or supervisor mode (i.e., in kernel mode), and/or embodiment in a secure physical implementation,” to keep encryption keys secret at all times.</p></li>
+<li><p>They must also use “techniques of obfuscation clearly designed to effectively disguise and hamper attempts to discover the approaches used”.</p></li>
+</ul>
+<p>Thus, video content must travel through the system encrypted and must only interact with authorized components over authorized pathways.</p>
+<p>For example in Windows Vista AACS is implemented via the Protected Video Path (PVP), which stops DRM-restricted content from playing while unsigned software is running in order to prevent the unsigned software from accessing the content. Additionally, PVP can encrypt information during transmission to the monitor or the graphics card, which makes it more difficult to make unauthorized recordings. In other word, you cannot watch a video, while running your own programmes.</p>
+<p>It is obvious that to fully comply with the DRM requirement specification, AACS has to be deeply embedded into an operating system. This essentially rules out any open source implementation of the AACS as the algorithms to decrypt keys would be easily accessible and therefore security would be compromised. But even if only proprietary implementations are licensed and allowed, any Operating System can (at least theoretically) be emulated by a virtual machine. But running an AACS compliant software player on the VR would give access to the unsecured data streams. This has indeed already been done:</p>
+<p>In December 2006 the first software was announced and subsequently published that enables to backup AACS encrypted content. In order to keep the software legal, it cannot actually be used on its own, but an appropriate key must be supplied manually. Since extracting a key without license would be illegal, 128 bit keys were quickly made available throughout the Internet. The AACS licensing agency tried to put a stop to this by suing websites publishing keys as well as by revoking keys (in particular for Windows based software like WinDVD). However, the more they sued, the more keys were published, etc.</p>
+<p>The issue remains unsolved to date, in particular since much is a legal grey area. Some of the issues of DRM highlighted by this controversy are:</p>
+<ul>
+<li><p>The AACS licensing agency argued that publishing the keys is illegal since they would fall under their software patent. However, is it possible to patent single 128-bit numbers? And if so, in which form? Only the hexadecimal representation, or all other representations as well, i.e. decimal, binary, octal, sum of two or several values, etc.? AACS can be used with millions of keys. Are they all patented? Can I be sued if I use one, publish one, etc.</p></li>
+<li><p>Under the laws of many countries making one backup of media content is legal. AACS however effectively prevents this.</p></li>
+<li><p>AACS protected media can only be played on specially licensed devises, not necessarily on the playback devise of my choice. In other words, although I own the content of the disc (not the Copyright!) I can not play it the way I want to.</p>
+<p>As a comparison: If I buy a bottle of Coke, I am not allowed to reproduce its content, as it is a patented formula. However, no-one can force me to only drink it out of a particular licensed glass.</p></li>
+<li><p>The DRM requirements of AACS can only be realised when fully embedded into the operating system. In order not to compromise security (and thus violate the licensing terms) information on the embedding cannot be made public or even given to competitors. However, this amounts essentially to a similar controversy that has led to anti-trust law suits, by companies like Netscape, RealPlayer etc, against Microsoft.</p></li>
+</ul>
+<p>These are just some issues. There are plenty more…</p>
+<p>Finite fields are an important algebraic concepts used in more advanced cryptographic techniques. This section will introduce the very basics, as far as we need them in this lecture. For a more in-depth introduction, see for instance: Lidl &amp; Niederreiter, <em>Introduction to finite fields and their applications</em>, Cambridge University Press, 1994.</p>
+<p>We first define some basic algebraic notions characterising sets together with binary operations.</p>
+<p><span><strong>(Group)</strong></span> Let <span class="math inline">\(G\)</span> be a set and <span class="math inline">\(\circ\)</span> be a binary operation defined on <span class="math inline">\(G\)</span>, i.e., <span class="math inline">\(\circ:G\times G\to G\)</span>. We say <span class="math inline">\((G,\circ)\)</span> is a <strong>group</strong> if <span class="math inline">\(\circ\)</span></p>
+<p>is <strong>closed</strong>: that is for each <span class="math inline">\(a,b\in G\)</span> we have <span class="math inline">\(a\circ b\in G\)</span>.</p>
+<p>is <strong>associative</strong>: that is for each <span class="math inline">\(a,b,c\in G\)</span> we have <span class="math inline">\((a\circ
+    b)\circ c=a\circ (b\circ c)\)</span>.</p>
+<p>has an <strong>identity element</strong>: that is there exists <span class="math inline">\(e\in G\)</span> s.t. for each <span class="math inline">\(a\in G\)</span> we have <span class="math inline">\(a\circ e=e\circ a=a\)</span>.</p>
+<p>every element has an <strong>inverse</strong>: that is for every <span class="math inline">\(a\in G\)</span> there is <span class="math inline">\({{{a}^{-1}}}\in G\)</span> with <span class="math inline">\(a\circ{{{a}^{-1}}}={{{a}^{-1}}}\circ a=e\)</span>.</p>
+<p>We call <span class="math inline">\((G,\circ)\)</span> a <strong>commutative group</strong> if in addition <span class="math inline">\(\circ\)</span></p>
+<p>is <strong>commutative</strong>: that is for each <span class="math inline">\(a,b\in G\)</span> we have <span class="math inline">\(a\circ b=b
+    \circ a\)</span>.</p>
+<p>An easy example are the integers with addition <span class="math inline">\(({\mathbb{Z}},+)\)</span>. They form a commutative group, since they are clearly closed and associative, the identity element is <span class="math inline">\(0\)</span> and each element <span class="math inline">\(a\in{\mathbb{Z}}\)</span> has an inverse, namely <span class="math inline">\(-a\in{\mathbb{Z}}\)</span>.</p>
+<p>On the contrary the integers with times <span class="math inline">\((Z,\cdot)\)</span> are not a group! Although they are closed under <span class="math inline">\(\cdot\)</span>, times is associative, and <span class="math inline">\(1\in{\mathbb{Z}}\)</span> is an identity element, not every element has an inverse. For example <span class="math inline">\(2\in{\mathbb{Z}}\)</span> would have <span class="math inline">\(\frac12\)</span> as inverse, which is not an integer!</p>
+<p>However, the relationship between <span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span> gives rise to the following definition:</p>
+<p><span><strong>(Ring)</strong></span> Let <span class="math inline">\(R\)</span> be a set with two binary operations <span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span>, then <span class="math inline">\((R,+,\cdot)\)</span> is a ring if</p>
+<p><span class="math inline">\((R,+)\)</span> is a commutative group,</p>
+<p><span class="math inline">\((R,\cdot)\)</span> is closed, associative and has an identity.</p>
+<p><span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span> are</p>
+<p><strong>left distributive</strong>: that is for each <span class="math inline">\(a,b,c\in R\)</span> we have <span class="math inline">\(a\cdot(b+c)=(a\cdot b)+(a\cdot c)\)</span>,</p>
+<p><strong>right distributive</strong>: that is for each <span class="math inline">\(a,b,c\in R\)</span> we have <span class="math inline">\((b+c)\cdot a=(b\cdot a)+(c\cdot a)\)</span>.</p>
+<p><span class="math inline">\(({\mathbb{Z}},+,\cdot)\)</span> is a ring, since we can easily verify the distributivity laws.</p>
+<p>If the multiplication has inverses as well, we can extend our ring definition to the following:</p>
+<p><span><strong>(Field)</strong></span> Let <span class="math inline">\(F\)</span> be a set with two binary operations <span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span>. Let <span class="math inline">\(F^*\)</span> be the set that contains all elements of <span class="math inline">\(F\)</span> except the identity for <span class="math inline">\(+\)</span>, i.e. we let <span class="math inline">\(F^*=F\setminus{\{0\}}\)</span>, where <span class="math inline">\(0\)</span> is the identity for <span class="math inline">\(+\)</span>. Then <span class="math inline">\((F,+,\cdot)\)</span> is a field if</p>
+<ul>
+<li><p><span class="math inline">\((F,+)\)</span> is a commutative group,</p></li>
+<li><p><span class="math inline">\((F^*,\cdot)\)</span> is a commutative group,</p></li>
+<li><p><span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span> are left and right distributive.</p></li>
+</ul>
+<p>The rational numbers with addition and multiplication form a field: <span class="math inline">\(({\mathbb{Q}},+,\cdot)\)</span>. Both operations are obviously closed, associative and commutative. For addition <span class="math inline">\(0\)</span> is the identity and for every <span class="math inline">\(a\in{\mathbb{Q}}\)</span> the additive inverse is <span class="math inline">\(-a\in{\mathbb{Q}}^*\)</span>. Then <span class="math inline">\({\mathbb{Q}}^*={\mathbb{Q}}\setminus{\{0\}}\)</span>, <span class="math inline">\(1\)</span> is the identity for multiplication and every <span class="math inline">\(a\in{\mathbb{Q}}^*\)</span> has a multiplicative inverse, namely <span class="math inline">\(\frac1a\in{\mathbb{Q}}^*\)</span>.</p>
+<p><strong>Some Finite Examples</strong></p>
+<p>In the following we want to restrict ourselves to finite sets. We have already seen some examples of finite sets in Mathematics 1 + 2. For example, the set of all permutations of <span class="math inline">\(n\)</span> elements forms non-commutative(!) group, the symmetric group <span class="math inline">\(S_n\)</span>. Other finite sets are the sets of residue classes modulo some <span class="math inline">\(n\)</span>, <span class="math inline">\({\mathbb{Z}}_n\)</span>, for which we now want to check what structure they form.</p>
+<p>For finite sets one can use a very easy technique to verify the properties of a particular operation, by simply writing down the entire operation in the form of a <em>multiplication table</em>. For example we can use the following multiplication tables</p>
+<p>[t]<span>.2</span> <span><span class="math inline">\(({\mathbb{Z}}_2,+)\)</span>:</span> <span class="math inline">\(\begin{array}{c|cc}
+           +  &amp;{{{[0]}_{2}}}&amp;{{{[1]}_{2}}}\\\hline
+    {{{[0]}_{2}}}&amp;{{{[0]}_{2}}}&amp;{{{[1]}_{2}}}\\
+    {{{[1]}_{2}}}&amp;{{{[1]}_{2}}}&amp;{{{[0]}_{2}}}\\
+  \end{array}\)</span></p>
+<p>[t]<span>.2</span> <span><span class="math inline">\(({\mathbb{Z}}_2,\cdot)\)</span>:</span> <span class="math inline">\(\begin{array}{c|cc}
+       \cdot  &amp;{{{[0]}_{2}}}&amp;{{{[1]}_{2}}}\\\hline
+    {{{[0]}_{2}}}&amp;{{{[0]}_{2}}}&amp;{{{[0]}_{2}}}\\
+    {{{[1]}_{2}}}&amp;{{{[0]}_{2}}}&amp;{{{[1]}_{2}}}\\
+  \end{array}\)</span></p>
+<p>[t]<span>.3</span> <span><span class="math inline">\(({\mathbb{Z}}_3,+)\)</span>:</span> <span class="math inline">\(\begin{array}{c|ccc}
+           +  &amp;{{{[0]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\\hline
+    {{{[0]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\
+    {{{[1]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}&amp;{{{[0]}_{3}}}\\
+    {{{[2]}_{3}}}&amp;{{{[2]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[1]}_{3}}}\\
+  \end{array}\)</span></p>
+<p>[t]<span>.3</span> <span><span class="math inline">\(({\mathbb{Z}}_3,\cdot)\)</span>:</span> <span class="math inline">\(\begin{array}{c|ccc}
+       \cdot  &amp;{{{[0]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\\hline
+    {{{[0]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[0]}_{3}}}\\
+    {{{[1]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\
+    {{{[2]}_{3}}}&amp;{{{[0]}_{3}}}&amp;{{{[2]}_{3}}}&amp;{{{[1]}_{3}}}\\
+  \end{array}\)</span></p>
+<p>to determine that <span class="math inline">\(({\mathbb{Z}}_2,+)\)</span> and <span class="math inline">\(({\mathbb{Z}}_3,+)\)</span> are commutative groups. Obviously <span class="math inline">\(({\mathbb{Z}}_2,\cdot)\)</span> and <span class="math inline">\(({\mathbb{Z}}_3,\cdot)\)</span> are not groups, since neither <span class="math inline">\({{{[0]}_{2}}}\)</span> nor <span class="math inline">\({{{[0]}_{3}}}\)</span> have a multiplicative inverse. However, if we get rid of the <span class="math inline">\(0\)</span> element in both tables, it is easy to see that we get commutative groups for <span class="math inline">\({\mathbb{Z}}_2^*\)</span> and <span class="math inline">\({\mathbb{Z}}_3^*\)</span>:</p>
+<p>[t]<span>.3</span> <span><span class="math inline">\(({\mathbb{Z}}_2^*,\cdot)\)</span>:</span> <span class="math inline">\(\begin{array}{c|c} \cdot &amp;{{{[1]}_{2}}}\\\hline
+    {{{[1]}_{2}}}&amp;{{{[1]}_{2}}}\\
+  \end{array}\)</span></p>
+<p>[t]<span>.3</span> <span><span class="math inline">\(({\mathbb{Z}}_3^*,\cdot)\)</span>:</span> <span class="math inline">\(\begin{array}{c|cc} \cdot &amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\\hline
+    {{{[1]}_{3}}}&amp;{{{[1]}_{3}}}&amp;{{{[2]}_{3}}}\\
+    {{{[2]}_{3}}}&amp;{{{[2]}_{3}}}&amp;{{{[1]}_{3}}}\\
+  \end{array}\)</span></p>
+<p>Since one can also easily check that both distributivity laws hold, we can thus conclude that both <span class="math inline">\(({\mathbb{Z}}_2,+,\cdot)\)</span> and <span class="math inline">\(({\mathbb{Z}}_3,+,\cdot)\)</span> are fields.</p>
+<p>The natural next question is: Do all residue class sets form a field together with addition and multiplication? Let’s have a look at <span class="math inline">\({\mathbb{Z}}_4\)</span>:</p>
+<p><span><span class="math inline">\(({\mathbb{Z}}_4,+)\)</span>:</span> <span class="math inline">\(\begin{array}{c|cccc} +
+    &amp;{{{[0]}_{4}}}&amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}\\\hline
+    {{{[0]}_{4}}}&amp;{{{[0]}_{4}}}&amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}\\
+    {{{[1]}_{4}}}&amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}&amp;{{{[0]}_{4}}}\\
+    {{{[2]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}&amp;{{{[0]}_{4}}}&amp;{{{[1]}_{4}}}\\
+    {{{[3]}_{4}}}&amp;{{{[3]}_{4}}}&amp;{{{[0]}_{4}}}&amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}\\
+  \end{array}\)</span> <span class="math inline">\(\begin{array}{c|ccc} \cdot
+    &amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}\\\hline
+    {{{[1]}_{4}}}&amp;{{{[1]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[3]}_{4}}}\\
+    {{{[2]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[0]}_{4}}}&amp;{{{[2]}_{4}}}\\
+    {{{[3]}_{4}}}&amp;{{{[3]}_{4}}}&amp;{{{[2]}_{4}}}&amp;{{{[1]}_{4}}}\\
+  \end{array}\)</span></p>
+<p>We can see, while <span class="math inline">\((Z_4,+)\)</span> is a commutative group, <span class="math inline">\(({\mathbb{Z}}_4^*,\cdot)\)</span> is not a group: It is not even closed, as <span class="math inline">\({{{[2]}_{4}}}\cdot{{{[2]}_{4}}}={{{[0]}_{4}}}\)</span> and <span class="math inline">\({{{[0]}_{4}}}\)</span> is not an element of <span class="math inline">\({\mathbb{Z}}_4^*\)</span>, and there is also no inverse element for <span class="math inline">\({{{[2]}_{4}}}\)</span>. Thus <span class="math inline">\(({\mathbb{Z}}_4,+,\cdot)\)</span> is a ring (<span class="math inline">\({{{[1]}_{4}}}\)</span> is the neutral element for <span class="math inline">\(\cdot\)</span>), but not a field.</p>
+<p>Indeed one can show the following two theorems:</p>
+<p><span class="math inline">\(({\mathbb{Z}}_n,+,\cdot)\)</span> is a ring for every <span class="math inline">\(n\geq 2\)</span>.</p>
+<p><span class="math inline">\(({\mathbb{Z}}_p,+,\cdot)\)</span> is a field if and only if <span class="math inline">\(p\)</span> is a prime number.</p>
+<p><span><strong>(Finite Field)</strong></span> Let <span class="math inline">\((F,+,\cdot)\)</span> be a field. If <span class="math inline">\(F\)</span> is a finite set with <span class="math inline">\(p\)</span> elements, we call <span class="math inline">\((F,+,\cdot)\)</span> a <strong>finite field</strong> or order <span class="math inline">\(p\)</span> and denote it by <span class="math inline">\({\mathbb{F}}_p\)</span>.</p>
+<p>We can now write <span class="math inline">\({\mathbb{F}}_2=({\mathbb{Z}}_2,+,\cdot)\)</span>, <span class="math inline">\({\mathbb{F}}_3=({\mathbb{Z}}_3,+,\cdot)\)</span>, etc. In general we have for every prime number <span class="math inline">\(p\)</span>: <span class="math inline">\({\mathbb{F}}_p=({\mathbb{Z}}_p,+,\cdot)\)</span>.</p>
+<p>So far we know that for every prime number <span class="math inline">\(p\)</span> there exists a finite field of that order. In addition one can easily show that this is (up to isomorphism) the only finite field of that order. That is, every finite field of prime order has the structure of <span class="math inline">\({\mathbb{Z}}_p\)</span>.</p>
+<p>Our next question is, are these the only finite fields, or are there any others, i.e. of an order that is not a prime number. In order to answer this question, we have to make a little detour via the theory of polynomials.</p>
+<p><strong>Polynomials</strong></p>
+<p>I assume that everyone is familiar with polynomials. The following is just to recall some important concepts. While we can define polynomials essentially over any ring, we will restrict ourselves, for now, to polynomials over the integers <span class="math inline">\({\mathbb{Z}}\)</span>.</p>
+<p><span><strong>(Polynomial)</strong></span> We call an expression of the form <span class="math inline">\(a_nx^n+\ldots+a_2x^2+a_1x+a_0\)</span> a <strong>polynomial</strong> in the variable <span class="math inline">\(x\)</span> over <span class="math inline">\({\mathbb{Z}}\)</span>, if all <span class="math inline">\(a_i\in{\mathbb{Z}}, i=0,\ldots,n\)</span> and all exponents <span class="math inline">\(0,\ldots,n\)</span> are non-negative integers.</p>
+<p>We denote the set of all polynomials in one variable over <span class="math inline">\({\mathbb{Z}}\)</span> as <span class="math inline">\({\mathbb{Z}}[x]\)</span>.</p>
+<p>We call a summand <span class="math inline">\(a_ix^i\)</span> of a polynomial a <strong>monomial</strong> of <strong>degree</strong> <span class="math inline">\(i\)</span> with <strong>coefficient</strong> <span class="math inline">\(a_i\)</span>.</p>
+<p>We say a polynomial <span class="math inline">\(p\in{\mathbb{Z}}[x]\)</span> is of <strong>degree</strong> <span class="math inline">\(n\)</span> if its greatest non-zero monomial is of degree <span class="math inline">\(n\)</span>. We generally write <span class="math inline">\(deg(p)=n\)</span>.</p>
+<p><span class="math inline">\(p(x)=x^4+3x^3+2x^2-10\)</span> is a polynomial of degree <span class="math inline">\(4\)</span>.</p>
+<p><span><strong>(Polynomial Arithmetic)</strong></span> Let <span class="math inline">\(p(x),q(x)\in{\mathbb{Z}}[x]\)</span> be <span class="math inline">\(p(x)=a_nx^n+\ldots+a_2x^2+a_1x+a_0\)</span> and <span class="math inline">\(q(x)=b_nx^n+\ldots+b_2x^2+b_1x+b_0\)</span>. We define addition <span class="math inline">\(+\)</span> and multiplication <span class="math inline">\(\cdot\)</span> as component-wise operations as:</p>
+<p><span class="math inline">\(p(x)+q(x)=(a_n+b_n)x^n+\ldots+(a_2+b_2)x^2+(a_1+b_1)x+(a_0+b_0)\)</span></p>
+<p><span class="math inline">\(\begin{array}[t]{lllllll}
+      p(x)*q(x)&amp;=&amp;&amp;(a_n*b_m)x^{(n+m)}&amp;+(a_n*b_{m-1})x^{(n+(m-1))}&amp;+\ldots&amp;+(a_n*b_{0})x^n\\
+      &amp; &amp;&amp;&amp;\qquad\qquad\qquad\qquad\vdots\\
+      &amp;&amp; + &amp;(a_0*b_m)x^m&amp;+(a_0*b_{m-1})x^{m-1}&amp;+\ldots&amp;+(a_0*b_{0})
+    \end{array}\)</span></p>
+<p>Let <span class="math inline">\(p(x)=x^4+3x^3+2x^2-10\)</span> and <span class="math inline">\(q(x)=2x^3-9x^2+2x-3\)</span>. Then we have <span class="math display">\[\begin{aligned}
+p(x)+q(x)&amp;=&amp;x^4+5x^3-7x^2+2x-13\\
+p(x)\cdot q(x)&amp;=&amp;2x^7-3x^6-21x^5-15x^4-25x^3+84x^2-20x+30.\end{aligned}\]</span></p>
+<p>Recall that <span class="math inline">\(({\mathbb{Z}},+,\cdot)\)</span> forms a ring. Similarly we can show that <span class="math inline">\(({\mathbb{Z}}[x],+,\cdot)\)</span> forms a ring with the addition and multiplication over polynomials. We now observe some more parallels between <span class="math inline">\({\mathbb{Z}}\)</span> and <span class="math inline">\({\mathbb{Z}}[x]\)</span>:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left"><span class="math inline">\({\mathbb{Z}}[x]\)</span></th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+<p><strong>Division with Remainder</strong></p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="left">Divide <span class="math inline">\(323\)</span> by <span class="math inline">\(7\)</span></td>
+<td align="left">Divide <span class="math inline">\(x^3+4x^2+6x-1\)</span> by <span class="math inline">\(x^2+2x+1\)</span></td>
+</tr>
+<tr class="even">
+<td align="left"><span class="math inline">\(\begin{array}{lcccc}
+      \phantom{-}323 &amp; / &amp; 7 &amp; = &amp; 46\\
+      -28 &amp; &amp; &amp; &amp; \\\cline{1-1}
+      \phantom{-3}43 &amp; &amp; &amp; &amp; \\
+      \phantom{}-42 &amp; &amp; &amp; &amp; \\\cline{1-1}
+      \phantom{-34}1 &amp; &amp; &amp; &amp; \\
+    \end{array}\)</span></td>
+<td align="left"><span class="math inline">\(\begin{array}{llllllcccc}
+    \phantom{-}x^3 &amp; +4x^2 &amp; +6x &amp; -1 &amp; / &amp; x^2+2x+1 &amp; = &amp; x + 2 \\
+    -x^3 &amp; - 2x^2 &amp; -\phantom{6}x \\\cline{1-4}
+    &amp; \phantom{-}2x^2 &amp; +5x &amp; -1\\
+    &amp; - 2x^2 &amp; -4x &amp; -2\\\cline{2-4}
+    &amp; &amp; \phantom{-4}x &amp; -3
+  \end{array}\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left">[.4cm] In general for every <span class="math inline">\(a,b\in{\mathbb{Z}}\)</span> with <span class="math inline">\(a\geq b\)</span> we find <span class="math inline">\(s,r\in{\mathbb{Z}}\)</span> with <span class="math inline">\(|s|&lt;|a|\)</span> and <span class="math inline">\(|r|&lt;|b|\)</span> such that <span class="math inline">\(a=s\cdot b + r\)</span>.</td>
+<td align="left">In general for every <span class="math inline">\(p(x),q(x)\in{\mathbb{Z}}[x]\)</span> with <span class="math inline">\(deg(p)\geq deg(q)\)</span> we find <span class="math inline">\(s(x),r(x)\in{\mathbb{Z}}[x]\)</span> with <span class="math inline">\(deg(s)&lt;deg(p)\)</span> and <span class="math inline">\(deg(r)&lt;deg(q)\)</span> such that <span class="math inline">\(k\cdot p(x)=s(x)\cdot q(x) + r(x)\)</span>, with <span class="math inline">\(k\in{\mathbb{Z}}\)</span>.Observe that <span class="math inline">\(k\)</span> guarantees integer division for the coefficients (e.g. <span class="math inline">\(x^2+1\)</span> is not divisible by <span class="math inline">\(2x+1\)</span> in <span class="math inline">\({\mathbb{Z}}\)</span>, but <span class="math inline">\(4x^2+4\)</span> is). Such a <span class="math inline">\(k\)</span> always exists!</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Modular Arithmetic</strong></p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="left">Recall: <span class="math inline">\({323\equiv 1(\bmod\, 7)}\)</span>.</td>
+<td align="left">Similarly we can write <span class="math inline">\({x^3+4x^2+6x-1\equiv x-3(\bmod\, x^2+2x+1)}\)</span></td>
+</tr>
+<tr class="even">
+<td align="left">[.2cm] The modulo operation divides <span class="math inline">\({\mathbb{Z}}\)</span> into a finite number of residue classes, e.g., for mod <span class="math inline">\(n\)</span>: <span class="math inline">\({\mathbb{Z}}_n={\{0,1,\ldots,n-1\}}\)</span></td>
+<td align="left">Given a polynomial <span class="math inline">\(p(x)\in{\mathbb{Z}}[x]\)</span>, the modulo <span class="math inline">\(p(x)\)</span> operation induces residue classes on <span class="math inline">\({\mathbb{Z}}[x]\)</span>. We denote the set of all residue classes modulo <span class="math inline">\(p(x)\)</span> by <span class="math inline">\({\mathbb{Z}}[x]/p(x)\)</span>. It contains one residue class for each polynomial in <span class="math inline">\({\mathbb{Z}}[x]\)</span> of degree less then <span class="math inline">\(p(x)\)</span>. These are, however, infinitely many!.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Irreducibility</strong></p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="left"><span class="math inline">\(p\in{\mathbb{Z}}\)</span> is prime if it is only divisible by <span class="math inline">\(1\)</span> and <span class="math inline">\(p\)</span>.</td>
+<td align="left"><span class="math inline">\(p(x)\in{\mathbb{Z}}[x]\)</span> is called <em>irreducible</em> if it is only divisible by <span class="math inline">\(p(x)\)</span> and the trivial polynomial <span class="math inline">\(a_0x^0=a_0\in{\mathbb{Z}}\)</span>. E.g., <span class="math inline">\(x^2+1\)</span> is irreducible in <span class="math inline">\({\mathbb{Z}}[x]\)</span>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Polynomials over Finite Fields</strong></p>
+<p>As mentioned earlier we can construct polynomials over arbitrary rings and therefore also fields. We will now look at the residue class construction for polynomials over finite fields. While the following could be done with any finite field of the form <span class="math inline">\({\mathbb{F}}_p\)</span>, where <span class="math inline">\(p\)</span> is a prime number, we will restrict ourselves to the finite field <span class="math inline">\({\mathbb{F}}_2\)</span>, in which we are most interested in.</p>
+<p>Recall that <span class="math inline">\({\mathbb{F}}_2=({\mathbb{Z}}_2,+,\cdot)\)</span>, i.e. contains only the elements <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span>. We will from now on omit the residue class notation and write <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span> instead of <span class="math inline">\({{{[0]}_{2}}}\)</span> and <span class="math inline">\({{{[1]}_{2}}}\)</span>, respectively!</p>
+<p>We now define the polynomial ring over <span class="math inline">\({\mathbb{F}}_2\)</span> as <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span>. We first have a look at the general polynomial arithmetic in <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span>, which works modulo <span class="math inline">\(2\)</span>, that is we only have <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span> as coefficients and the addition and multiplication of coefficient is performed modulo <span class="math inline">\(2\)</span>. We observe this with an example:</p>
+<p>Let <span class="math inline">\(x^2+x+1\)</span> and <span class="math inline">\(x^3+x^2+x\)</span> be polynomials over <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span> then we have:</p>
+<p><span class="math display">\[\begin{aligned}
+  (x^2+x+1)+(x^3+x^2+x) = &amp; x^3+2x^2+2x+1 &amp; = x^3+1\\
+  (x^2+x+1)\cdot(x^3+x^2+x) = &amp; x^5+2*x^4+3*x^3+2*x^2+x &amp; = x^5+x^3+x\end{aligned}\]</span></p>
+<p>This also means that we do not need negative coefficients, as <span class="math inline">\(x+1{=}-x+1{=}x-1{=}-x-1\)</span> in <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span>.</p>
+<p><strong>Modular Arithmetic</strong>Let <span class="math inline">\(p(x)=x^4+x+1\in{{ {\mathbb{F}}_2[x]}}\)</span>. Then we have</p>
+<p><span class="math display">\[{(x^2+x+1)\cdot(x^3+x^2+x)= x^5+x^3+x\equiv x^3+x^2(\bmod\, x^4+x+1)}\]</span></p>
+<p>To verify this we look at the following polynomial division:</p>
+<p><span class="math display">\[\begin{array}{rrrrrrrcccc}
+  x^5 &amp; &amp; +x^3 &amp; &amp; +x&amp; &amp; / &amp; x^4+x+1 = x \\
+  x^5 &amp; &amp;      &amp;+x^2&amp; +x \\\cline{1-6}
+  &amp; &amp; x^3     &amp;+x^2&amp; \\
+\end{array}\]</span></p>
+<p>In a next step we can now define the residue classes for <strong><span class="math inline">\({{ {\mathbb{F}}_2[x]/p(x)}}\)</span></strong>. For simplification we take <span class="math inline">\(p(x)\)</span> to be polynomial of degree <span class="math inline">\(2\)</span> first. Thus let <span class="math inline">\(p(x)=x^2+1\in{{ {\mathbb{F}}_2[x]/p(x)}}\)</span>. We then get four residue classes modulo <span class="math inline">\(x^2+1\)</span>, represented by <span class="math inline">\([0]\)</span>, <span class="math inline">\([1]\)</span>, <span class="math inline">\([x]\)</span>, <span class="math inline">\([x+1]\)</span>, i.e., all polynomials in <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span> with degree less than <span class="math inline">\(2\)</span>. We can then construct the following tables for <span class="math inline">\(+\)</span> and <span class="math inline">\(\cdot\)</span>:</p>
+<p><span>.5</span></p>
+<p><span><span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+1),+)\)</span>:</span><span class="math inline">\(\begin{array}{c|cccc} +
+             &amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\\hline
+    {{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\
+    {{{[1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x]}_{}}}\\
+    {{{[x]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}\\
+    {{{[x+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[0]}_{}}}\\
+  \end{array}\)</span></p>
+<p><span>.5</span></p>
+<p><span><span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+1),\cdot)\)</span>:</span><span class="math inline">\(\begin{array}{c|cccc} \cdot
+    &amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\\hline
+    {{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}\\
+    {{{[1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\
+    {{{[x]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x+1]}_{}}}\\
+    {{{[x+1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[0]}_{}}}\\
+  \end{array}\)</span></p>
+<p>We can see that, even when we delete the <span class="math inline">\({{{[0]}_{}}}\)</span> lines in the multiplication table, the group axioms will not hold for ‘<span class="math inline">\(\cdot\)</span>’, as <span class="math inline">\({{{[x+1]}_{}}}\)</span> does not have an inverse element. This can be explained by the fact that <span class="math inline">\(x^2+1\)</span> is not an irreducible polynomial in <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span>, since it can be factorised into <span class="math inline">\(x^2+1=(x+1)(x+1)\)</span>. We recall that for those <span class="math inline">\({\mathbb{Z}}_n\)</span> where <span class="math inline">\(n\)</span> was a prime number we could construct a finite field. If we replace <span class="math inline">\(x^2+1\)</span> by an irreducible polynomial we should therefore also get a finite field. Let’s try instead the polynomial <span class="math inline">\(p(x)=x^2+x+1\)</span>, which is indeed irreducible over <span class="math inline">\({{ {\mathbb{F}}_2[x]}}\)</span>.</p>
+<p><span>.5</span></p>
+<p><span><span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+x+1),+)\)</span>:</span><span class="math inline">\(\begin{array}{c|cccc} +
+             &amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\\hline
+    {{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\
+    {{{[1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x]}_{}}}\\
+    {{{[x]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}\\
+    {{{[x+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[0]}_{}}}\\
+  \end{array}\)</span></p>
+<p><span>.5</span></p>
+<p><span><span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+x+1),\cdot)\)</span>:</span><span class="math inline">\(\begin{array}{c|cccc} \cdot
+    &amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\\hline
+    {{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[0]}_{}}}\\
+    {{{[1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}\\
+    {{{[x]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[1]}_{}}}\\
+    {{{[x+1]}_{}}}&amp;{{{[0]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}\\
+  \end{array}\)</span></p>
+<p>The two tables demonstrate that both <span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+x+1),+)\)</span> and <span><span class="math inline">\((({{ {\mathbb{F}}_2[x]}}/(x^2+x+1))^*,\cdot)\)</span></span> form commutative groups. [Recall that <span class="math inline">\(({{ {\mathbb{F}}_2[x]}}/(x^2+x+1))^*={{ {\mathbb{F}}_2[x]}}/(x^2+x+1)\setminus{\{{{{[0]}_{}}}\}}\)</span>.] We can also show that the two distributivity laws hold and that therefore <span><span class="math inline">\((({{ {\mathbb{F}}_2[x]}}/(x^2+x+1))^*,+,\cdot)\)</span></span> is a finite field of order <span class="math inline">\(4\)</span>.</p>
+<p>This construction demonstrates that for every irreducible polynomial <span class="math inline">\(p(x)\in{{ {\mathbb{F}}_2[x]}}\)</span> of degree <span class="math inline">\(n\)</span>, <span class="math inline">\({{ {\mathbb{F}}_2[x]/p(x)}}\)</span> yields a finite field of order <span class="math inline">\(2^n\)</span>, independent of the concrete choice of <span class="math inline">\(p(x)\)</span>. The more general result is:</p>
+<p>For every prime <span class="math inline">\(p\)</span> and every positive integer <span class="math inline">\(n\)</span> there exists one finite field of order <span class="math inline">\({\mathbb{F}}_{p^n}\)</span>.</p>
+<p><strong>Finite Fields as Binary Operations</strong></p>
+<p>What does all this have to do with computer science? Recall that we restricted ourselves to polynomials in <span class="math inline">\(p(x)\in{{ {\mathbb{F}}_2[x]}}\)</span>. This means each monomial in <span class="math inline">\(p(x)\)</span> has as coefficient either <span class="math inline">\(1\)</span> or <span class="math inline">\(0\)</span>, i.e. the coefficients are binary. We can therefore straightforwardly translate polynomials of degree <span class="math inline">\(d\)</span> into bit strings of length <span class="math inline">\(d+1\)</span> by just taking the coefficients of each monomial.</p>
+<p>Consider the translation of a polynomial of degree <span class="math inline">\(7\)</span> into <span class="math inline">\(8\)</span> bits: <span class="math display">\[\begin{array}{cccccccr}
+ x^7 &amp; + x^6 &amp; &amp; + x^4 &amp; + x^3 &amp; &amp; &amp; +1\\
+1 &amp; 1 &amp; 0 &amp; 1 &amp; 1&amp; 0 &amp; 0&amp; 1
+\end{array}\]</span></p>
+<p>We now can use the operations on the finite field <span class="math inline">\({\mathbb{F}}_{2^n}\)</span> to define operations on bit strings of length <span class="math inline">\(n+1\)</span>. For brevity we will take our examples from <span class="math inline">\({\mathbb{F}}_8={{ {\mathbb{F}}_2[x]/p(x)}}\)</span> with <span class="math inline">\(p(x)=x^3+x+1\)</span> as irreducible polynomial.</p>
+<p>We first observe that addition on <span class="math inline">\({\mathbb{F}}_{2^n}\)</span> is the same as the xor operation <span class="math inline">\({{\oplus}}\)</span> on bits.</p>
+<p><span class="math inline">\(\begin{array}{cccccccr}
+(x^2+x+1) &amp;+ &amp; (x^2+1) &amp; = &amp; x\\
+111 &amp; {{\oplus}}&amp; 101 &amp; = &amp; 010
+\end{array}\)</span></p>
+<p>While addition does not give us a new operation, we can use multiplication on <span class="math inline">\({\mathbb{F}}_8\)</span> to define a new bitwise operation <span class="math inline">\(\otimes\)</span>. First here is the multiplication table for <span class="math inline">\({\mathbb{F}}_8^*\)</span>:</p>
+<p><span class="math inline">\(\begin{array}{c|ccccccc} 
+    {({\mathbb{F}}_8^*,\cdot)} &amp; {{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x^2+x+1]}_{}}}\\\hline
+    {{{[1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x^2+x+1]}_{}}}\\
+    {{{[x]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[x^2+1]}_{}}}\\
+    {{{[x+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x]}_{}}}\\
+    {{{[x^2]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[1]}_{}}}\\
+    {{{[x^2+1]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x^2+x]}_{}}}\\
+    {{{[x^2+x]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[x+1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[x^2]}_{}}}\\
+    {{{[x^2+x+1]}_{}}}&amp;{{{[x^2+x+1]}_{}}}&amp;{{{[x^2+1]}_{}}}&amp;{{{[x]}_{}}}&amp;{{{[1]}_{}}}&amp;{{{[x^2+x]}_{}}}&amp;{{{[x^2]}_{}}}&amp;{{{[x+1]}_{}}}\\
+  \end{array}\)</span></p>
+<p>The operation <span class="math inline">\(b_1\otimes b_2\)</span> on 3-bit strings <span class="math inline">\(b_1,b_2\)</span> is then defined taking the two polynomials corresponding to <span class="math inline">\(b_1\)</span> and <span class="math inline">\(b_2\)</span>, respectively, multiplying them according to the above multiplication table and transforming the result again into a 3-bit string.</p>
+<p><span class="math inline">\(\begin{array}{cccccccr}
+(x^2+x+1) &amp;\cdot &amp; (x^2+1) &amp; \equiv &amp; x^2+x &amp; ({\bmod}\, x^3+x+1)\\
+111 &amp; \otimes &amp; 101 &amp; = &amp; 110
+\end{array}\)</span></p>
+<p>Observe that the choice of irreducible polynomial really matters in the definition of <span class="math inline">\(\otimes\)</span>. For instance, if our choice of irreducible polynomial were <span class="math inline">\(x^3+x^2+1\)</span> then the example would look like this:</p>
+<p><span class="math inline">\(\begin{array}{cccccccr}
+(x^2+x+1) &amp;\cdot &amp; (x^2+1) &amp; \equiv &amp; 1 &amp;({\bmod}\, x^3+x^2+1)\\
+111 &amp; \otimes &amp; 101 &amp; = &amp; 001
+\end{array}\)</span></p>
+<p>Finally we consider another two, more complex examples, where again the choice of irreducible polynomial matters:</p>
+<p><span class="math display">\[\begin{array}{cccccccr}
+(x^6+1) &amp;\cdot &amp; (x^4+1) &amp; \equiv &amp; x^5+x^4+x^3+x^2+1&amp;({\bmod}\, x^8+x^4+x^3+x+1)\\
+01000001 &amp; \otimes &amp; 00010001 &amp; = &amp; 00111101
+\end{array}\]</span> <span class="math display">\[\begin{array}{cccccccr}
+(x^6+1) &amp;\cdot &amp; (x^4+1) &amp; \equiv &amp; x^5+x^2+1 &amp;({\bmod}\, x^8+x^4+x^3+x^2+1)\\
+01000001 &amp; \otimes &amp; 00010001 &amp; = &amp; 00100101
+\end{array}\]</span></p>
+<p>Observe that the bit strings are of length <span class="math inline">\(8\)</span>, which is a multiple of <span class="math inline">\(4\)</span>. We can therefore express the above multiplications in terms of hexadecimal numbers, indicated by prefix <span class="math inline">\(0x\)</span>:</p>
+<p><span class="math inline">\(0x41 \otimes 0x11 = 0x3\mathrm{D}\)</span>and<span class="math inline">\(0x41 \otimes 0x11 = 0x25\)</span></p>
+<p>I assume that everyone is familiar with matrices and basic operations on them. This handout should serve as a reminder.</p>
+<p>Recall that a matrix is a rectangular array of elements. Abstractly a <span class="math inline">\(m\times
+n\)</span> matrix can be displayed as: <span class="math display">\[A=\begin{bmatrix}
+  a_{1,1}  &amp; \cdots  &amp; a_{1,n}\\
+  \vdots &amp; \cdot &amp; \vdots \\
+  a_{m,1} &amp; \cdots &amp; a_{m,n}
+\end{bmatrix}\]</span> We will refer to a particular element in the <span class="math inline">\(i\)</span>’s row and <span class="math inline">\(j\)</span>’s column as <span class="math inline">\(A[i,j]=a_{i,j}\)</span>.</p>
+<p><span class="math inline">\(A = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 1 &amp; 2 &amp; 7 \\ 4&amp;9&amp;2 \\
+  6&amp;0&amp;5\end{bmatrix}\)</span> is a <span class="math inline">\(4\times3\)</span> matrix. The element <span class="math inline">\(a_{2,3}\)</span> is <span class="math inline">\(7\)</span>.</p>
+<p>The matrix <span class="math inline">\(R = \begin{bmatrix} 1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 &amp; 9 \end{bmatrix}\)</span> is a <span class="math inline">\(1\times 9\)</span> matrix, or 9-element row vector.</p>
+<p><strong>Matrix Addition</strong></p>
+<p>Given <span class="math inline">\(m\times n\)</span> matrices <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, their sum <span class="math inline">\(A + B\)</span> is the <span class="math inline">\(m\times n\)</span> matrix computed by adding corresponding elements (i.e. <span class="math inline">\((A + B)[i, j] = A[i, j]
++ B[i, j]\)</span>).</p>
+<p><span class="math inline">\(\begin{bmatrix} 1 &amp; 3 \\ 1 &amp; 0 \\ 1 &amp; 2 \end{bmatrix} + \begin{bmatrix} 0 &amp; 0 \\
+  7 &amp; 5 \\ 2 &amp; 1 \end{bmatrix} = \begin{bmatrix} 1+0 &amp; 3+0 \\ 1+7 &amp; 0+5 \\ 1+2 &amp;
+  2+1 \end{bmatrix} = \begin{bmatrix} 1 &amp; 3 \\ 8 &amp; 5 \\ 3 &amp; 3 \end{bmatrix}\)</span></p>
+<p><strong>Matrix Multiplication</strong></p>
+<p>Multiplication of two matrices is well-defined only if the number of columns of the left matrix is the same as the number of rows of the right matrix. If <span class="math inline">\(A\)</span> is an <span class="math inline">\(m\times n\)</span> matrix and <span class="math inline">\(B\)</span> is an <span class="math inline">\(n\times p\)</span> matrix, then their matrix product <span class="math inline">\(AB\)</span> is the <span class="math inline">\(m\times p\)</span> matrix (<span class="math inline">\(m\)</span> rows, <span class="math inline">\(p\)</span> columns) given by: <span class="math display">\[(AB)[i,j] = A[i,1] B[1,j] + A[i,2] B[2,j] + ... + A[i,n] B[n,j]\quad \mbox{for each pair $i$ and $j$.}\]</span></p>
+<p><span class="math inline">\(\begin{bmatrix} 1 &amp; 0 &amp; 2 \\ -1 &amp; 3 &amp; 1 \\ \end{bmatrix} \cdot \begin{bmatrix}
+  3 &amp; 1 \\ 2 &amp; 1 \\ 1 &amp; 0 \end{bmatrix} = \begin{bmatrix} (1 \cdot 3 + 0 \cdot
+  2 + 2 \cdot 1) &amp; (1 \cdot 1 + 0 \cdot 1 + 2 \cdot 0) \\ (-1 \cdot 3 + 3
+  \cdot 2 + 1 \cdot 1) &amp; (-1 \cdot 1 + 3 \cdot 1 + 1 \cdot 0) \\
+\end{bmatrix} = \begin{bmatrix} 5 &amp; 1 \\ 4 &amp; 2 \\ \end{bmatrix}\)</span></p>
+<p><strong>Matrix Multiplication over <span class="math inline">\({\mathbb{F}}_2\)</span></strong></p>
+<p>So far we have implicitly assumed that our matrices are defined over the integers. However, we can likewise define matrices with elements from <span class="math inline">\({\mathbb{F}}_2\)</span>. Addition and multiplication are then similarly defined as above with the exception that the operations on the single components are performed modulo <span class="math inline">\(2\)</span>.</p>
+<p>Addition: <span class="math inline">\(\begin{bmatrix} 1 &amp; 0\\ 1 &amp; 1\\\end{bmatrix}+
+\begin{bmatrix} 1 &amp; 1\\ 0 &amp; 1\\\end{bmatrix} = 
+\begin{bmatrix} 0 &amp; 1\\ 1 &amp; 0\\\end{bmatrix}
+\)</span></p>
+<p>Multiplication: <span class="math inline">\(\begin{bmatrix} 1 &amp; 0 &amp; 1 &amp; 1\\ 1 &amp; 1 &amp; 0 &amp; 1\\ 0 &amp; 1 &amp; 0 &amp; 1\\\end{bmatrix}\cdot
+\begin{bmatrix} 1 \\ 0\\ 1\\ 1\\\end{bmatrix} = 
+\begin{bmatrix} 1+1+1 \\ 1+1\\ 1 \\\end{bmatrix}=
+\begin{bmatrix} 1 \\ 0\\ 1 \\\end{bmatrix}
+\)</span></p>
+<p>Similarly, we can define matrices and matrix arithmetic over other fields, in particular over all finite fields of the form <span class="math inline">\({\mathbb{F}}_{2^n}\)</span>.</p>
+</body>
+</html>
