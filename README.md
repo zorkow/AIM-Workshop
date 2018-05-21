@@ -4,3 +4,4 @@ Materials for and resulting from the Maths Web Accessibility workshop at AIM, Sa
 
 * [Challenges](https://zorkow.github.io/AIM-Workshop/challenge/)
 * [Longdivision Example](https://zorkow.github.io/AIM-Workshop/example/longdivisions.html)
+* [Whole lecture](https://zorkow.github.io/AIM-Workshop/example/lecture.pdf)
