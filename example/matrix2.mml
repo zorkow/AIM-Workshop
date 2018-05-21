@@ -1,0 +1,74 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mi>B</mi>
+  <mo>=</mo>
+  <mrow>
+    <mo>(</mo>
+    <mtable columnalign="center center" rowspacing="4pt" columnspacing="1em" rowlines="none solid" columnlines="solid">
+      <mtr>
+        <mtd>
+          <mn>0</mn>
+          <mspace width="thinmathspace" />
+          <mo>&#x22EF;<!-- ⋯ --></mo>
+          <mspace width="thinmathspace" />
+          <mn>0</mn>
+        </mtd>
+        <mtd>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mpadded height="0" depth="0">
+              <mover>
+                <mrow class="MJX-TeXAtom-OP MJX-fixedlimits">
+                  <mover>
+                    <mrow>
+                      <mn>0</mn>
+                      <mspace width="thinmathspace" />
+                      <mo>&#x22EF;<!-- ⋯ --></mo>
+                      <mspace width="thinmathspace" />
+                      <mn>0</mn>
+                      <mpadded width="0" height="8.6pt" depth="3pt">
+                        <mrow />
+                      </mpadded>
+                    </mrow>
+                    <mo>&#x23DE;<!-- ⏞ --></mo>
+                  </mover>
+                </mrow>
+                <mi>p</mi>
+              </mover>
+            </mpadded>
+          </mrow>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd>
+          <mi>R</mi>
+        </mtd>
+        <mtd>
+          <mi>A</mi>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd>
+          <mn>0</mn>
+        </mtd>
+        <mtd>
+          <mn>0</mn>
+        </mtd>
+      </mtr>
+    </mtable>
+    <mo>)</mo>
+  </mrow>
+  <mspace width="negativethinmathspace" />
+  <mspace width="negativethinmathspace" />
+  <mpadded height="+.7em" depth="-.7em" voffset="+.7em">
+    <mrow class="MJX-TeXAtom-ORD">
+      <mrow class="MJX-TeXAtom-ORD">
+        <mo maxsize="2.047em" minsize="2.047em">}</mo>
+      </mrow>
+      <mrow class="MJX-TeXAtom-VCENTER">
+        <mstyle displaystyle="false" scriptlevel="1">
+          <mi>p</mi>
+        </mstyle>
+      </mrow>
+    </mrow>
+  </mpadded>
+  <mspace mathbackground="black" height="3.4em" depth="0em" />
+</math>
